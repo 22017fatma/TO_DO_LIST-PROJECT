@@ -1,13 +1,46 @@
 import * as dotenv from "dotenv";
-import { createServer } from "node:http";
 import app from "./app";
+import { createServer } from "node:http";
+import AppLogger from "./logger/AppLogger";
+import { connectDB, closeDB } from "./config/prisma-client";
 
-dotenv.config();
+dotenv.config({ path: `${process.cwd()}/.env` });
 
-const PORT = process.env.PORT || 4000;
+const PORT = process.env.PORT || 4001;
+const httpServer = createServer(app);
 
-const server = createServer(app);
+const startServer = async () => {
+  try {
+    await connectDB();
+    console.log("Monolith DB connected");
 
-server.listen(PORT, () => {
-  console.log(`✅ Test Server running on http://localhost:${PORT}`);
-});
+    httpServer.listen(PORT, () => {
+      console.log(`Monolith Server running on http://localhost:${PORT}`);
+      AppLogger.initLogger();
+    });
+
+    // Handle graceful shutdown
+    process.on("SIGTERM", async () => {
+      console.log("SIGTERM received. Shutting down gracefully...");
+      await closeDB();
+      httpServer.close(() => {
+        console.log("Server closed.");
+        process.exit(0);
+      });
+    });
+
+    process.on("SIGINT", async () => {
+      console.log("SIGINT received. Shutting down gracefully...");
+      await closeDB();
+      httpServer.close(() => {
+        console.log("Server closed.");
+        process.exit(0);
+      });
+    });
+  } catch (error) {
+    console.error(error);
+    process.exit(1);
+  }
+};
+
+startServer();
