@@ -1,0 +1,6 @@
+{
+  "watch": ["src", ".env"],
+  "ext": "ts,js,js,mjs,json",
+  "exec": "clear && tsx ./src/server.ts",
+  "restartable": "rs"
+}
